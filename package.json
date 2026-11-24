@@ -1,0 +1,24 @@
+{
+  "name": "prime-maestros-hub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prime Maestros Hub - Public academy website, academy management system, and student learning portal",
+  "packageManager": "pnpm@12.5.1",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev:backend": "pnpm --filter @pmh/backend run start:dev",
+    "dev:frontend": "pnpm --filter @pmh/frontend run dev",
+    "build": "pnpm -r build",
+    "build:backend": "pnpm --filter @pmh/backend run build",
+    "build:frontend": "pnpm --filter @pmh/frontend run build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "db:generate": "pnpm --filter @pmh/backend run prisma:generate",
+    "db:migrate": "pnpm --filter @pmh/backend run prisma:migrate",
+    "db:seed": "pnpm --filter @pmh/backend run prisma:seed",
+    "db:studio": "pnpm --filter @pmh/backend run prisma:studio"
+  }
+}
