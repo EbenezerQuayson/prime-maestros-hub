@@ -7,6 +7,8 @@ import {
   Music2,
   Piano,
 } from 'lucide-react';
+import { SiteFooter } from '@/components/layout/site-footer';
+import { SiteHeader } from '@/components/layout/site-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,24 +22,28 @@ import {
 const INSTRUMENTS = [
   {
     name: 'Acoustic Guitar',
+    slug: 'acoustic-guitar-mastery',
     description:
       'Build solid technique from posture and rhythm strumming to fingerstyle and live performance.',
     icon: Guitar,
   },
   {
     name: 'Bass Guitar',
+    slug: 'bass-guitar-foundation',
     description:
       'Master pocket, groove, fretboard fluency, and ensemble locking for modern bands.',
     icon: Music2,
   },
   {
     name: 'Keyboard / Piano',
+    slug: 'keyboard-piano-performance',
     description:
       'Develop hand independence, chord voicings, sight-reading, and contemporary repertoire.',
     icon: Piano,
   },
   {
     name: 'Drums',
+    slug: 'drums-percussion-rhythm',
     description:
       'Strengthen stick control, limb coordination, rudiments, and dynamic live rhythm.',
     icon: Drum,
@@ -54,30 +60,7 @@ const STEPS = [
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="font-bold text-lg tracking-tight">
-            Prime Maestros Hub
-          </Link>
-          <nav className="flex items-center gap-6 text-sm font-medium">
-            <a
-              href="#programs"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Programs
-            </a>
-            <a
-              href="#how-it-works"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Admissions
-            </a>
-            <Button asChild size="sm" variant="secondary">
-              <Link href="/login">Portal Sign In</Link>
-            </Button>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
 
       <main className="flex-1">
         <section className="max-w-6xl mx-auto px-6 py-20 md:py-28">
@@ -93,38 +76,53 @@ export default function HomePage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Button asChild size="lg">
-              <a href="#how-it-works">
+              <Link href="/apply">
                 Start Application (GH₵50 Registration)
                 <ArrowRight className="w-4 h-4" />
-              </a>
+              </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/login">Student &amp; Staff Portal</Link>
+              <Link href="/programs">Explore Programs</Link>
             </Button>
           </div>
         </section>
 
         <section id="programs" className="border-t bg-card py-16">
           <div className="max-w-6xl mx-auto px-6">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-              Initial Academy Instruments
-            </h2>
-            <p className="mt-2 text-muted-foreground">
-              Choose one primary instrument on application; additional instruments can be added later.
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+                  Initial Academy Instruments
+                </h2>
+                <p className="mt-2 text-muted-foreground">
+                  Choose one primary instrument on application; additional instruments can be added
+                  later.
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/programs">View All Programs</Link>
+              </Button>
+            </div>
             <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {INSTRUMENTS.map(({ name, description, icon: Icon }) => (
-                <Card key={name} className="bg-background">
+              {INSTRUMENTS.map(({ name, slug, description, icon: Icon }) => (
+                <Card key={name} className="bg-background flex flex-col justify-between">
                   <CardHeader>
                     <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-primary mb-2">
                       <Icon className="w-5 h-5" />
                     </div>
                     <CardTitle className="text-lg">{name}</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
                     <CardDescription className="leading-relaxed">
                       {description}
                     </CardDescription>
+                    <Link
+                      href={`/programs/${slug}`}
+                      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                    >
+                      Program details
+                      <ArrowRight className="size-3.5" />
+                    </Link>
                   </CardContent>
                 </Card>
               ))}
@@ -156,12 +154,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t bg-card py-8">
-        <div className="max-w-6xl mx-auto px-6 text-sm text-muted-foreground flex flex-col sm:flex-row justify-between gap-4">
-          <span>Prime Maestros Hub &mdash; Foundation Setup</span>
-          <span>Currency: GHS (GH₵) &bull; Timezone: Africa/Accra</span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
