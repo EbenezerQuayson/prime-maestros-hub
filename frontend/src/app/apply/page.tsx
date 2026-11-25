@@ -82,6 +82,7 @@ function ApplyFormContent() {
   const [consentAccepted, setConsentAccepted] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
+  const [initializingPayment, setInitializingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<CreateApplicationResponse | null>(
     null,
@@ -168,6 +169,39 @@ function ApplyFormContent() {
     }
   }
 
+  async function handleProceedToCheckout() {
+    if (!submitted) return;
+    setError(null);
+    setInitializingPayment(true);
+    try {
+      sessionStorage.setItem(
+        'pmh_pending_application',
+        JSON.stringify({
+          applicationId: submitted.applicationId,
+          applicationToken: submitted.applicationToken,
+        }),
+      );
+      const res = await apiFetch<{ authorizationUrl: string }>(
+        '/payments/initialize',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            invoiceId: submitted.invoice.id,
+            applicationToken: submitted.applicationToken,
+          }),
+        },
+      );
+      window.location.assign(res.authorizationUrl);
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : 'Unable to start hosted checkout. Please try again.',
+      );
+      setInitializingPayment(false);
+    }
+  }
+
   if (submitted) {
     const statusHref = `/application-status?id=${encodeURIComponent(submitted.applicationId)}&token=${encodeURIComponent(submitted.applicationToken)}`;
 
@@ -189,6 +223,14 @@ function ApplyFormContent() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle />
+              <AlertTitle>Checkout Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="rounded-lg border bg-background p-4 space-y-2 text-sm">
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Application ID</span>
@@ -237,24 +279,20 @@ function ApplyFormContent() {
             </AlertDescription>
           </Alert>
 
-          <Alert>
-            <AlertTitle>Next Step: Hosted Payment Checkout (Milestone M3)</AlertTitle>
-            <AlertDescription>
-              Online checkout initialization (Paystack / Hubtel with Mobile Money support) will be
-              connected to this invoice in Milestone M3. Your student account and unique PMH
-              number will be created automatically once payment is verified server-side.
-            </AlertDescription>
-          </Alert>
-
           <div className="flex flex-wrap gap-3">
-            <Button asChild>
-              <Link href={statusHref}>
-                View Application Status
-                <ArrowRight className="size-4" />
-              </Link>
+            <Button
+              type="button"
+              size="lg"
+              disabled={initializingPayment}
+              onClick={handleProceedToCheckout}
+            >
+              {initializingPayment
+                ? 'Redirecting to Checkout...'
+                : `Pay ${formatGhsFromPesewas(submitted.invoice.amountPesewas)} Now`}
+              <ArrowRight className="size-4" />
             </Button>
-            <Button asChild variant="outline">
-              <Link href="/programs">Browse Programs</Link>
+            <Button asChild variant="outline" size="lg">
+              <Link href={statusHref}>View Application Status</Link>
             </Button>
           </div>
         </CardContent>

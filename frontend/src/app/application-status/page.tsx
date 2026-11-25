@@ -52,6 +52,7 @@ function ApplicationStatusContent() {
   const [applicationId, setApplicationId] = useState(initialId);
   const [token, setToken] = useState(initialToken);
   const [loading, setLoading] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ApplicationStatusResponse | null>(null);
 
@@ -89,6 +90,39 @@ function ApplicationStatusContent() {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     await lookup(applicationId, token);
+  }
+
+  async function handlePayNow() {
+    if (!result?.registrationInvoice) return;
+    setError(null);
+    setPaying(true);
+    try {
+      sessionStorage.setItem(
+        'pmh_pending_application',
+        JSON.stringify({
+          applicationId: result.applicationId,
+          applicationToken: token.trim(),
+        }),
+      );
+      const res = await apiFetch<{ authorizationUrl: string }>(
+        '/payments/initialize',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            invoiceId: result.registrationInvoice.id,
+            applicationToken: token.trim(),
+          }),
+        },
+      );
+      window.location.assign(res.authorizationUrl);
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : 'Unable to initialize checkout.',
+      );
+      setPaying(false);
+    }
   }
 
   return (
@@ -187,7 +221,14 @@ function ApplicationStatusContent() {
                 <AlertDescription>{result.decisionReason}</AlertDescription>
               </Alert>
             )}
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap gap-3">
+              {result.registrationInvoice?.status === 'PENDING' && (
+                <Button type="button" disabled={paying} onClick={handlePayNow}>
+                  {paying
+                    ? 'Redirecting...'
+                    : `Pay ${formatGhsFromPesewas(result.registrationInvoice.amountPesewas)} Now`}
+                </Button>
+              )}
               <Button asChild variant="outline" size="sm">
                 <Link href="/login">Go to Portal Sign In</Link>
               </Button>

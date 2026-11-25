@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { InstructorsModule } from './modules/instructors/instructors.module';
 import { InstrumentsModule } from './modules/instruments/instruments.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { ProgramsModule } from './modules/programs/programs.module';
 import { PrismaModule } from './prisma/prisma.module';
 
@@ -34,6 +35,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ProgramsModule,
     InstructorsModule,
     ApplicationsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [
