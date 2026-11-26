@@ -1,4 +1,4 @@
-import { PrismaClient, Role, UserStatus } from '@prisma/client';
+import { CourseLevel, PrismaClient, Role, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -58,7 +58,7 @@ async function main() {
       },
     });
 
-    await prisma.program.upsert({
+    const program = await prisma.program.upsert({
       where: { slug: item.programSlug },
       update: {
         name: item.programName,
@@ -71,6 +71,28 @@ async function main() {
         description: `Structured in-person training program for ${item.name}.`,
         instrumentId: instrument.id,
         durationWeeks: 12,
+        active: true,
+      },
+    });
+
+    await prisma.course.upsert({
+      where: {
+        programId_sequence: {
+          programId: program.id,
+          sequence: 1,
+        },
+      },
+      update: {
+        title: `${item.name} — Level 1: Foundations`,
+        level: CourseLevel.BEGINNER,
+        active: true,
+      },
+      create: {
+        programId: program.id,
+        sequence: 1,
+        level: CourseLevel.BEGINNER,
+        title: `${item.name} — Level 1: Foundations`,
+        description: `Core posture, technique, rhythm, and foundational repertoire for ${item.name}.`,
         active: true,
       },
     });

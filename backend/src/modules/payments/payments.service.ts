@@ -5,6 +5,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -13,8 +14,6 @@ import {
   AuthTokenType,
   InvoiceStatus,
   InvoiceType,
-  NotificationChannel,
-  NotificationStatus,
   PaymentProvider,
   PaymentStatus,
   Prisma,
@@ -25,6 +24,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { InitializePaymentDto } from './dto/initialize-payment.dto';
 import { SimulateMockPaymentDto } from './dto/simulate-mock-payment.dto';
 import { HubtelGateway } from './gateways/hubtel.gateway';
@@ -46,6 +46,7 @@ export class PaymentsService {
     private readonly paystackGateway: PaystackGateway,
     private readonly hubtelGateway: HubtelGateway,
     private readonly mockGateway: MockPaymentGateway,
+    @Optional() private readonly notificationsService?: NotificationsService,
   ) {}
 
   async initializePayment(
@@ -500,6 +501,12 @@ export class PaymentsService {
 
       let linkedStudentId = payment.invoice.studentId;
       let studentNumber = payment.invoice.student?.studentNumber ?? null;
+      let activationDispatch: {
+        userId: string;
+        email: string;
+        studentNumber: string;
+        rawActivationToken: string;
+      } | null = null;
 
       if (
         payment.invoice.type === InvoiceType.REGISTRATION &&
@@ -574,16 +581,12 @@ export class PaymentsService {
                 },
               });
 
-              await tx.notification.create({
-                data: {
-                  userId: user.id,
-                  channel: NotificationChannel.EMAIL,
-                  type: 'ACCOUNT_ACTIVATION',
-                  subject: 'Prime Maestros Hub — Payment Confirmed & Activate Account',
-                  content: `Your GH₵50 registration payment is confirmed and your student number is ${studentNumber}. Please activate your account using your secure activation link.`,
-                  status: NotificationStatus.PENDING,
-                },
-              });
+              activationDispatch = {
+                userId: user.id,
+                email: user.email,
+                studentNumber,
+                rawActivationToken,
+              };
             }
           }
         }
@@ -628,13 +631,37 @@ export class PaymentsService {
       });
 
       return {
-        providerReference: payment.providerReference,
-        status: PaymentStatus.SUCCESS,
-        invoiceStatus: InvoiceStatus.PAID,
-        studentNumber,
-        idempotent: false,
+        result: {
+          providerReference: payment.providerReference,
+          status: PaymentStatus.SUCCESS,
+          invoiceStatus: InvoiceStatus.PAID,
+          studentNumber,
+          idempotent: false,
+        },
+        activationDispatch,
       };
     });
+
+    if ('activationDispatch' in outcome && outcome.activationDispatch) {
+      const dispatch = outcome.activationDispatch;
+      const frontendUrl = this.configService.get<string>(
+        'FRONTEND_URL',
+        'http://localhost:3000',
+      );
+      const activateUrl = `${frontendUrl}/activate?token=${encodeURIComponent(dispatch.rawActivationToken)}`;
+
+      if (this.notificationsService) {
+        await this.notificationsService.sendEmail({
+          userId: dispatch.userId,
+          to: dispatch.email,
+          type: 'ACCOUNT_ACTIVATION',
+          subject: 'Prime Maestros Hub — Payment Confirmed & Activate Account',
+          content: `Your GH₵50 registration payment is confirmed. Your unique student number is ${dispatch.studentNumber}. Activate your account (valid for 48 hours): ${activateUrl}`,
+          devLogNote: `Activation URL for ${dispatch.email} (${dispatch.studentNumber}): ${activateUrl}`,
+        });
+      }
+      return outcome.result;
+    }
 
     return outcome;
   }

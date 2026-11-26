@@ -5,14 +5,17 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { AdminApplicationsModule } from './modules/admin-applications/admin-applications.module';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { InstructorsModule } from './modules/instructors/instructors.module';
 import { InstrumentsModule } from './modules/instruments/instruments.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ProgramsModule } from './modules/programs/programs.module';
+import { StudentsModule } from './modules/students/students.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -29,6 +32,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ]),
     PrismaModule,
     AuditModule,
+    NotificationsModule,
     AuthModule,
     HealthModule,
     InstrumentsModule,
@@ -36,6 +40,8 @@ import { PrismaModule } from './prisma/prisma.module';
     InstructorsModule,
     ApplicationsModule,
     PaymentsModule,
+    AdminApplicationsModule,
+    StudentsModule,
   ],
   controllers: [AppController],
   providers: [

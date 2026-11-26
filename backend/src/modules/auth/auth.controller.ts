@@ -109,6 +109,13 @@ export class AuthController {
   }
 
   @Public()
+  @Post('resend-activation')
+  @HttpCode(HttpStatus.OK)
+  resendActivation(@Body() dto: ForgotPasswordDto) {
+    return this.authService.resendActivation(dto.email);
+  }
+
+  @Public()
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   forgotPassword(@Body() dto: ForgotPasswordDto) {

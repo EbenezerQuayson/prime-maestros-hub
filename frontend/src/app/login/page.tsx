@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { SiteFooter } from '@/components/layout/site-footer';
+import { SiteHeader } from '@/components/layout/site-header';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,25 +18,19 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ApiError, apiFetch } from '@/lib/api';
+import { saveSession, type AuthUser } from '@/lib/auth';
 
 interface LoginResponse {
   accessToken: string;
-  user: {
-    id: string;
-    email: string;
-    role: string;
-    status: string;
-  };
+  user: AuthUser;
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [signedInUser, setSignedInUser] = useState<LoginResponse['user'] | null>(
-    null,
-  );
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,47 +42,42 @@ export default function LoginPage() {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
-      setSignedInUser(result.user);
+      saveSession(result.accessToken, result.user);
+
+      if (
+        result.user.role === 'SUPER_ADMIN' ||
+        result.user.role === 'ADMIN'
+      ) {
+        router.push('/admin');
+      } else if (result.user.role === 'STUDENT') {
+        router.push('/student');
+      } else {
+        router.push('/');
+      }
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : 'Unable to reach authentication server',
+        err instanceof ApiError
+          ? err.message
+          : 'Unable to reach authentication server',
       );
-    } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 py-12">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <Link
-            href="/"
-            className="text-xs font-semibold uppercase tracking-widest text-primary w-fit hover:underline"
-          >
-            Prime Maestros Hub
-          </Link>
-          <CardTitle className="text-2xl mt-2">Portal Sign In</CardTitle>
-          <CardDescription>
-            Sign in with your academy student, instructor, or administrator account.
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen flex flex-col">
+      <SiteHeader />
 
-        <CardContent>
-          {signedInUser ? (
-            <Alert className="border-emerald-200 bg-emerald-50 text-emerald-900">
-              <CheckCircle2 className="text-emerald-700" />
-              <AlertTitle>Signed in successfully</AlertTitle>
-              <AlertDescription className="text-emerald-800">
-                <p>
-                  {signedInUser.email} ({signedInUser.role})
-                </p>
-                <p className="text-xs text-emerald-700">
-                  Role-specific dashboards will be added in upcoming milestones.
-                </p>
-              </AlertDescription>
-            </Alert>
-          ) : (
+      <main className="flex-1 flex items-center justify-center px-6 py-12">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-2xl">Portal Sign In</CardTitle>
+            <CardDescription>
+              Sign in with your academy student, instructor, or administrator account.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <Alert variant="destructive">
@@ -109,7 +101,15 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <Input
                   id="password"
                   type="password"
@@ -126,9 +126,18 @@ export default function LoginPage() {
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
-          )}
-        </CardContent>
-      </Card>
+
+            <div className="pt-2 border-t text-xs text-muted-foreground flex items-center justify-between">
+              <span>Paid applicant?</span>
+              <Link href="/activate" className="text-primary font-medium hover:underline">
+                Activate your student account
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+
+      <SiteFooter />
     </div>
   );
 }

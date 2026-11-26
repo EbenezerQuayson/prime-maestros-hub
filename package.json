@@ -11,7 +11,7 @@
   "scripts": {
     "dev:backend": "pnpm --filter @pmh/backend run start:dev",
     "dev:frontend": "pnpm --filter @pmh/frontend run dev",
-    "build": "pnpm -r build",
+    "build": "pnpm -r --workspace-concurrency=1 build",
     "build:backend": "pnpm --filter @pmh/backend run build",
     "build:frontend": "pnpm --filter @pmh/frontend run build",
     "lint": "pnpm -r lint",

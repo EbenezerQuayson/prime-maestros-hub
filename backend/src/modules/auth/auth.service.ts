@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -10,6 +11,7 @@ import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -31,6 +33,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly auditService: AuditService,
+    @Optional() private readonly notificationsService?: NotificationsService,
   ) {}
 
   async login(
@@ -242,12 +245,77 @@ export class AuthService {
           expiresAt,
         },
       });
-      // Email delivery will be wired through NotificationService in M4/M5.
+
+      const frontendUrl = this.configService.get<string>(
+        'FRONTEND_URL',
+        'http://localhost:3000',
+      );
+      const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
+
+      if (this.notificationsService) {
+        await this.notificationsService.sendEmail({
+          userId: user.id,
+          to: normalizedEmail,
+          type: 'PASSWORD_RESET',
+          subject: 'Prime Maestros Hub — Password Reset Request',
+          content: `Reset your Prime Maestros Hub password using this link (valid for 1 hour): ${resetUrl}`,
+          devLogNote: `Password reset URL for ${normalizedEmail}: ${resetUrl}`,
+        });
+      }
     }
 
     return {
       message:
         'If an active account exists for that email, a password reset link has been queued.',
+    };
+  }
+
+  async resendActivation(email: string): Promise<{ message: string }> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: {
+        id: true,
+        status: true,
+        student: { select: { studentNumber: true } },
+      },
+    });
+
+    if (user && user.status === UserStatus.INVITED) {
+      const rawToken = randomBytes(32).toString('base64url');
+      const tokenHash = this.hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+      await this.prisma.authToken.create({
+        data: {
+          userId: user.id,
+          type: AuthTokenType.ACTIVATION,
+          tokenHash,
+          expiresAt,
+        },
+      });
+
+      const frontendUrl = this.configService.get<string>(
+        'FRONTEND_URL',
+        'http://localhost:3000',
+      );
+      const activateUrl = `${frontendUrl}/activate?token=${encodeURIComponent(rawToken)}`;
+
+      if (this.notificationsService) {
+        await this.notificationsService.sendEmail({
+          userId: user.id,
+          to: normalizedEmail,
+          type: 'ACCOUNT_ACTIVATION',
+          subject: 'Prime Maestros Hub — Activate Your Student Account',
+          content: `Activate your Prime Maestros Hub account${user.student?.studentNumber ? ` (${user.student.studentNumber})` : ''} using this link (valid for 48 hours): ${activateUrl}`,
+          devLogNote: `Activation URL for ${normalizedEmail}: ${activateUrl}`,
+        });
+      }
+    }
+
+    return {
+      message:
+        'If an invited account exists for that email, a fresh activation link has been queued.',
     };
   }
 

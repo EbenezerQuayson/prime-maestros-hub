@@ -17,6 +17,9 @@ export class AppController {
         instructors: '/api/v1/instructors',
         applications: '/api/v1/applications',
         payments: '/api/v1/payments',
+        students: '/api/v1/students',
+        adminApplications: '/api/v1/admin/applications',
+        adminStudents: '/api/v1/admin/students',
         auth: '/api/v1/auth',
       },
     };
